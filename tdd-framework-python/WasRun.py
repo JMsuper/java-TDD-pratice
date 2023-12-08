@@ -1,3 +1,17 @@
+class TestResult:
+    def __init__(self):
+        self.runCount = 0
+        self.failedCount = 0
+
+    def testStarted(self):
+        self.runCount = self.runCount + 1
+
+    def testFailed(self):
+        self.failedCount = self.failedCount + 1
+
+    def summary(self):
+        return "%d run, %d failed" % (self.runCount, self.failedCount)
+
 class TestCase:
     def __init__(self,name):
         self.name = name
@@ -9,10 +23,16 @@ class TestCase:
         pass
     
     def run(self):
+        result = TestResult()
+        result.testStarted()
         self.setUp()
-        method = getattr(self, self.name)
-        method()
+        try:
+            method = getattr(self, self.name)
+            method()
+        except:
+            result.testFailed()
         self.tearDown()
+        return result
 
 
 class WasRun(TestCase):
@@ -28,6 +48,9 @@ class WasRun(TestCase):
     def tearDown(self):
         self.log = self.log + "tearDown "
 
+    def testBrokenMethod(self):
+        raise Exception
+
 
 class TestCaseTest(TestCase):
     def testTemplateMethod(self):
@@ -35,7 +58,23 @@ class TestCaseTest(TestCase):
         test.run()
         assert("setUp testMethod tearDown " == test.log)
 
+    def testResult(self):
+        test = WasRun("testMethod")
+        result = test.run()
+        assert("1 run, 0 failed" == result.summary())
+
+    def testFailedResult(self):
+        test= WasRun("testBrokenMethod")
+        result = test.run()
+        assert("1 run, 1 failed" == result.summary())
+
+    def testFailedResultFormatting(self):
+        result = TestResult()
+        result.testStarted()
+        result.testFailed()
+        assert("1 run, 1 failed" == result.summary())
+
 
 # 부트스트랩 테스터(테스트 프레임워크를 테스트하는 테스터)
 if __name__ == "__main__":
-    TestCaseTest("testTemplateMethod").run()
+    TestCaseTest("testFailedResultFormatting").run()
